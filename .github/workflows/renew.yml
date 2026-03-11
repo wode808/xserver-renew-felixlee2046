@@ -1,8 +1,8 @@
-name: XServer-Vmail-VPS
+name: XServer-Hotmail-VPS
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '0 1 */2 * *'
 jobs:
   run_xserver_renew:
     runs-on: ubuntu-latest
@@ -50,6 +50,7 @@ jobs:
           PYTHONIOENCODING: utf-8
           XSERVER_ACCOUNT: ${{ secrets.XSERVER_ACCOUNT }}
           GOST_PROXY: ${{ secrets.GOST_PROXY }}
+          TG_BOT: ${{ secrets.TG_BOT }}
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" python renew.py
       - name: 📸 上传截图
