@@ -52,8 +52,6 @@ jobs:
           else
               echo
               echo "❌ GOST 连通性测试失败"
-              echo
-              echo "❌ GOST 连通性测试失败"
               echo "ok=false" >> "$GITHUB_OUTPUT"
               exit 0
           fi
@@ -86,10 +84,12 @@ jobs:
           print("Cron API 返回：")
           print(json.dumps(resp, ensure_ascii=False, indent=2))
           
-          if "job" not in resp:
-              raise RuntimeError("Cron API 未返回 job 字段")
+          job = resp.get("job") or resp.get("jobDetails")
           
-          job = resp["job"]
+          if job is None:
+              raise RuntimeError(
+                  f"Cron API 返回异常：{json.dumps(resp, ensure_ascii=False)}"
+              )
 
           if job.get("comment") != "retry=0":
               job["comment"] = "retry=0"
@@ -152,9 +152,19 @@ jobs:
               headers={"Authorization": f"Bearer {api_key}"}
           )
           
-          job = json.load(
+          resp = json.load(
               urllib.request.urlopen(req, timeout=15)
-          )["job"]
+          )
+          
+          print("Cron API 返回：")
+          print(json.dumps(resp, ensure_ascii=False, indent=2))
+          
+          job = resp.get("job") or resp.get("jobDetails")
+          
+          if job is None:
+              raise RuntimeError(
+                  f"Cron API 返回异常：{json.dumps(resp, ensure_ascii=False)}"
+              )
 
           # 当前 retry
           comment = job.get("comment", "")
