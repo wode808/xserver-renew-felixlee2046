@@ -77,7 +77,6 @@ jobs:
           fi
         
       - name: 🔄 GOST 成功后重置重试次数
-        if: ${{ steps.gost.outcome == 'success' }}
         env:
           CRON_JOB: ${{ secrets.CRON_JOB }}
         run: |
@@ -132,8 +131,7 @@ jobs:
                   raise
           PYTHON
 
-            - name: 🛠️ 安装系统依赖
-        if: ${{ steps.gost.outcome == 'success' }}
+      - name: 🛠️ 安装系统依赖
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -144,13 +142,11 @@ jobs:
             scrot
 
       - name: 🐍 安装 Python 依赖
-        if: ${{ steps.gost.outcome == 'success' }}
         run: |
           pip install seleniumbase
           seleniumbase install chromedriver
 
       - name: 🚀 运行脚本
-        if: ${{ steps.gost.outcome == 'success' }}
         env:
           PYTHONIOENCODING: utf-8
           XSERVER_ACCOUNT: ${{ secrets.XSERVER_ACCOUNT }}
