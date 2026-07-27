@@ -69,11 +69,9 @@ jobs:
           
                   RUN_TIME=$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')
 
-                  # 默认值
                   MASKED_EMAIL="未知"
                   
                   if [ -n "$XSERVER_ACCOUNT" ]; then
-                      # 取第一个账号（格式：邮箱,密码）
                       ACCOUNT="${XSERVER_ACCOUNT%%,*}"
                   
                       if [[ "$ACCOUNT" == *"@"* ]]; then
@@ -88,12 +86,12 @@ jobs:
                       fi
                   fi
                   
-                  MSG="
-                  f"🔴 XServer VPS 续期通知\n"
-                  f"🕐 运行时间: {now_str()}\n"
-                  f"🖥 服务器: 🇯🇵 Xserver VPS\n"
-                  f"🧑🏻‍🏫 用户名: {mask_username(USERNAME)}\n"
-                  f"📊 续期结果: ⚠️ GOST 启动失败"
+                  
+                  MSG="🔴 XServer VPS 续期通知
+                  🕐 运行时间: ${RUN_TIME}
+                  🖥 服务器: 🇯🇵 Xserver VPS
+                  🧑🏻‍🏫 用户名: ${MASKED_EMAIL}
+                  📊 续期结果: ⚠️ GOST 启动失败"
                   
                   curl -s \
                     -X POST \
