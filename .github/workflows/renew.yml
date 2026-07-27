@@ -61,7 +61,7 @@ jobs:
         env:
           CRON_JOB: ${{ secrets.CRON_JOB }}
         run: |
-          python3 - <<'EOF'
+          python3 - <<'PYTHON'
           import os
           import json
           import urllib.request
@@ -110,7 +110,7 @@ jobs:
               except Exception as e:
                   print(f"重置 retry 失败：{e}")
                   raise
-          EOF    
+          PYTHON
 
       - name: ⚠️ GOST 失败写回 Cron 5分钟后重试
         if: ${{ steps.gost.outputs.ok == 'false' }}
@@ -129,8 +129,7 @@ jobs:
           echo "⏳ 等待60秒..."
           sleep 60
           echo "🌐 使用直连调用 cron-job.org API..."
-          python3 - <<'EOF'
-          
+          python3 - <<'PYTHON'
           import os
           import re
           import json
@@ -277,7 +276,7 @@ jobs:
                   )
               except Exception:
                   pass
-          EOF
+          PYTHON
 
       - name: 🛠️ 安装系统依赖
         if: ${{ steps.gost.outputs.ok == 'true' }}
