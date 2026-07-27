@@ -26,6 +26,7 @@ jobs:
         env:
           GOST_PROXY: ${{ secrets.GOST_PROXY }}
           TG_BOT: ${{ secrets.TG_BOT }}
+          XSERVER_ACCOUNT: ${{ secrets.XSERVER_ACCOUNT }}
         run: |
           if [ -z "$GOST_PROXY" ]; then
             echo "⚠️ GOST_PROXY 未配置"
@@ -68,18 +69,24 @@ jobs:
           
                   RUN_TIME=$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')
 
-                  # 从 XSERVER_ACCOUNT 取邮箱并脱敏
-                  ACCOUNT="${XSERVER_ACCOUNT%%,*}"
-                  NAME="${ACCOUNT%@*}"
-                  DOMAIN="${ACCOUNT#*@}"
+                  # 默认值
+                  MASKED_EMAIL="未知"
                   
-                  if [ ${#NAME} -le 3 ]; then
-                      MASKED="${NAME:0:1}***"
-                  else
-                      MASKED="${NAME:0:3}********"
+                  if [ -n "$XSERVER_ACCOUNT" ]; then
+                      # 取第一个账号（格式：邮箱,密码）
+                      ACCOUNT="${XSERVER_ACCOUNT%%,*}"
+                  
+                      if [[ "$ACCOUNT" == *"@"* ]]; then
+                          NAME="${ACCOUNT%@*}"
+                          DOMAIN="${ACCOUNT#*@}"
+                  
+                          if [ ${#NAME} -le 3 ]; then
+                              MASKED_EMAIL="${NAME}********@${DOMAIN}"
+                          else
+                              MASKED_EMAIL="${NAME:0:3}********@${DOMAIN}"
+                          fi
+                      fi
                   fi
-                  
-                  MASKED_EMAIL="${MASKED}@${DOMAIN}"
                   
                   MSG="🔴 XServer VPS 续期通知
                   🕐 运行时间: ${RUN_TIME}
