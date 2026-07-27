@@ -70,16 +70,16 @@ jobs:
               urllib.request.urlopen(req, timeout=15)
           )
           
-          print(resp)
+          print(json.dumps(resp, indent=2, ensure_ascii=False))
           
-          job = resp["job"]
-          
+          job = resp["jobDetails"]
+
           if job.get("comment") != "retry=0":
               job["comment"] = "retry=0"
 
               req = urllib.request.Request(
                   f"https://api.cron-job.org/jobs/{job_id}",
-                  data=json.dumps({"job":job}).encode(),
+                  data=json.dumps({"jobDetails":job}).encode(),
                   headers={
                       "Authorization":f"Bearer {api_key}",
                       "Content-Type":"application/json"
@@ -129,10 +129,7 @@ jobs:
           
           print(json.dumps(resp, indent=2, ensure_ascii=False))
           
-          if "job" not in resp:
-              raise RuntimeError(f"cron-job.org 返回异常：{resp}")
-          
-          job = resp["job"]
+          job = resp["jobDetails"]
 
           # 当前 retry
           comment = job.get("comment", "")
@@ -149,7 +146,7 @@ jobs:
               # 重置 retry
               job["comment"] = "retry=0"
           
-              payload = json.dumps({"job": job}).encode()
+              payload = json.dumps({"jobDetails": job}).encode()
           
               req = urllib.request.Request(
                   f"https://api.cron-job.org/jobs/{job_id}",
@@ -207,7 +204,7 @@ jobs:
           }
           
           payload = json.dumps({
-              "job": job
+              "jobDetails": job
           }).encode()
           
           req = urllib.request.Request(
