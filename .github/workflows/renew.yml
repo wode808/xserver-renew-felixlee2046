@@ -47,32 +47,32 @@ jobs:
           sleep 3
       
           echo "✅ GOST 已启动，测试连通性..."
-      
-          if curl -fsS \
+
+          if IP=$(curl -fsS \
               --max-time 15 \
               -x http://127.0.0.1:8080 \
-              https://api.ipify.org \
-              | sed -E 's/([0-9]+\.[0-9]+\.)[0-9]+\.[0-9]+/\1**.**/g'
+              https://api.ipify.org)
           then
+              echo "$IP" | sed -E 's/([0-9]+\.[0-9]+\.)[0-9]+\.[0-9]+/\1**.**/g'
               echo
               echo "✅ GOST 连通性测试成功"
           else
               echo
               echo "❌ GOST 连通性测试失败"
-      
+          
               pkill -f "gost -L" || true
-      
+          
               if [ -n "$TG_BOT" ] && [[ "$TG_BOT" == *,* ]]; then
                   CHAT_ID="${TG_BOT%%,*}"
                   BOT_TOKEN="${TG_BOT#*,}"
-      
+          
                   curl -s \
                     -X POST \
                     "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
                     -d "chat_id=${CHAT_ID}" \
                     --data-urlencode "text=⚠️ GOST 启动失败，Workflow 已终止。"
               fi
-      
+          
               exit 1
           fi
         
