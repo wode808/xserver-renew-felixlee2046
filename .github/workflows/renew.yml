@@ -53,11 +53,11 @@ jobs:
               echo
               echo "❌ GOST 连通性测试失败"
               echo "ok=false" >> "$GITHUB_OUTPUT"
-              exit 0
+              exit 1
           fi
 
       - name: 🔄 GOST 成功后重置重试次数
-        if: ${{ steps.gost.outputs.ok == 'true' }}
+        if: ${{ steps.gost.outcome == 'success' }}
         env:
           CRON_JOB: ${{ secrets.CRON_JOB }}
         run: |
@@ -113,7 +113,7 @@ jobs:
           PYTHON
 
       - name: ⚠️ GOST 失败写回 Cron 5分钟后重试
-        if: ${{ steps.gost.outputs.ok == 'false' }}
+        if: ${{ steps.gost.outcome == 'failure' }}
         env:
           CRON_JOB: ${{ secrets.CRON_JOB }}
           TG_BOT: ${{ secrets.TG_BOT }}
@@ -279,7 +279,7 @@ jobs:
           PYTHON
 
       - name: 🛠️ 安装系统依赖
-        if: ${{ steps.gost.outputs.ok == 'true' }}
+        if: ${{ steps.gost.outcome == 'success' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -290,13 +290,13 @@ jobs:
             scrot
 
       - name: 🐍 安装 Python 依赖
-        if: ${{ steps.gost.outputs.ok == 'true' }}
+        if: ${{ steps.gost.outcome == 'success' }}
         run: |
           pip install seleniumbase
           seleniumbase install chromedriver
 
       - name: 🚀 运行脚本
-        if: ${{ steps.gost.outputs.ok == 'true' }}
+        if: ${{ steps.gost.outcome == 'success' }}
         env:
           PYTHONIOENCODING: utf-8
           XSERVER_ACCOUNT: ${{ secrets.XSERVER_ACCOUNT }}
