@@ -45,7 +45,51 @@ jobs:
           | sed -E 's/([0-9]+\.[0-9]+\.)[0-9]+\.[0-9]+/\1**.**/g'
           echo
 
-    
+      - name: 🔄 GOST 成功后重置重试次数
+        if: ${{ steps.gost.conclusion == 'success' }}
+        env:
+          CRON_JOB: ${{ secrets.CRON_JOB }}
+        run: |
+          python3 - <<'EOF'
+          import os
+          import json
+          import urllib.request
+
+          cron = os.environ.get("CRON_JOB", "")
+          if not cron or "," not in cron:
+              exit(0)
+
+          api_key, job_id = [x.strip() for x in cron.split(",",1)]
+
+          req = urllib.request.Request(
+              f"https://api.cron-job.org/jobs/{job_id}",
+              headers={"Authorization":f"Bearer {api_key}"}
+          )
+
+          job = json.load(
+              urllib.request.urlopen(req, timeout=15)
+          )["job"]
+
+          if job.get("comment") != "retry=0":
+              job["comment"] = "retry=0"
+
+              req = urllib.request.Request(
+                  f"https://api.cron-job.org/jobs/{job_id}",
+                  data=json.dumps({"job":job}).encode(),
+                  headers={
+                      "Authorization":f"Bearer {api_key}",
+                      "Content-Type":"application/json"
+                  },
+                  method="PATCH"
+              )
+
+              try:
+                  urllib.request.urlopen(req, timeout=15)
+                  print("retry 已清零")
+              except Exception as e:
+                  print(f"重置 retry 失败：{e}")
+                  raise
+          EOF    
 
       - name: ⚠️ GOST 失败写回 Cron 5分钟后重试
         if: ${{ steps.gost.conclusion == 'failure' }}
@@ -55,6 +99,7 @@ jobs:
         run: |
           python3 - <<'EOF'
           import os
+          import re
           import json
           import urllib.request
           import urllib.parse
@@ -68,21 +113,90 @@ jobs:
           
           api_key, job_id = [x.strip() for x in cron_job.split(",", 1)]
           
-    
+          # 读取当前 Job
+          req = urllib.request.Request(
+              f"https://api.cron-job.org/jobs/{job_id}",
+              headers={"Authorization": f"Bearer {api_key}"}
+          )
+          
+          job = json.load(
+              urllib.request.urlopen(req, timeout=15)
+          )["job"]
+
+          # 当前 retry
+          comment = job.get("comment", "")
+          
+          m = re.search(r"retry=(\d+)", comment)
+          
+          retry = int(m.group(1)) if m else 0
+          
+          print(f"当前 retry={retry}")
+          
+          # 已连续失败5次
+          if retry >= 5:
+
+              # 重置 retry
+              job["comment"] = "retry=0"
+          
+              payload = json.dumps({"job": job}).encode()
+          
+              req = urllib.request.Request(
+                  f"https://api.cron-job.org/jobs/{job_id}",
+                  data=payload,
+                  headers={
+                      "Authorization": f"Bearer {api_key}",
+                      "Content-Type": "application/json"
+                  },
+                  method="PATCH"
+              )
+          
+              try:
+                  urllib.request.urlopen(req, timeout=15)
+                  print("retry 已清零")
+              except Exception:
+                  pass
+          
+              tg = os.environ.get("TG_BOT", "")
+          
+              if tg and "," in tg:
+                  chat_id, token = [x.strip() for x in tg.split(",", 1)]
+          
+                  msg = "⚠️ GOST 连续失败5次，已停止自动重试"
+          
+                  try:
+                      urllib.request.urlopen(
+                          f"https://api.telegram.org/bot{token}/sendMessage",
+                          data=urllib.parse.urlencode({
+                              "chat_id": chat_id,
+                              "text": msg
+                          }).encode(),
+                          timeout=10
+                      )
+                  except Exception:
+                      pass
+          
+              print("停止自动重试")
+              raise SystemExit(0)
+          
+          # retry+1
+          retry += 1
+          
+          job["comment"] = f"retry={retry}"
+          
           next_run = datetime.datetime.utcnow() + timedelta(hours=8, minutes=5)
           
+          job["schedule"] = {
+              "timezone": "Asia/Shanghai",
+              "expiresAt": 0,
+              "hours": [next_run.hour],
+              "minutes": [next_run.minute],
+              "mdays": [next_run.day],
+              "months": [next_run.month],
+              "wdays": [-1],
+          }
+          
           payload = json.dumps({
-              "job": {
-                  "schedule": {
-                      "timezone": "Asia/Shanghai",
-                      "expiresAt": 0,
-                      "hours": [next_run.hour],
-                      "minutes": [next_run.minute],
-                      "mdays": [next_run.day],
-                      "months": [next_run.month],
-                      "wdays": [-1],
-                  }
-              }
+              "job": job
           }).encode()
           
           req = urllib.request.Request(
@@ -95,18 +209,11 @@ jobs:
               method="PATCH"
           )
           
-          from urllib.error import HTTPError
-
           try:
-              resp = urllib.request.urlopen(req, timeout=15)
-              print(resp.read().decode())
-              print("已写回 Cron，5 分钟后重试")
-          except HTTPError as e:
-              print(f"HTTP {e.code}")
-              print(e.read().decode())
-              raise
+              urllib.request.urlopen(req, timeout=15)
+              print(f"已写回 Cron，retry={retry}")
           except Exception as e:
-              print(e)
+              print(f"❌ 写回 Cron 失败：{e}")
               raise
           
           tg = os.environ.get("TG_BOT", "")
@@ -114,7 +221,7 @@ jobs:
           if tg and "," in tg:
               chat_id, token = [x.strip() for x in tg.split(",", 1)]
           
-              msg = "⚠️ GOST 启动失败，5 分钟后自动重试"
+              msg = f"⚠️ GOST 启动失败，第 {retry}/5 次，5 分钟后重试"
           
               try:
                   urllib.request.urlopen(
