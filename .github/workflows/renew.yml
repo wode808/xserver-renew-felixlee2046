@@ -66,10 +66,14 @@ jobs:
               headers={"Authorization":f"Bearer {api_key}"}
           )
 
-          job = json.load(
+          resp = json.load(
               urllib.request.urlopen(req, timeout=15)
-          )["job"]
-
+          )
+          
+          print(resp)
+          
+          job = resp["job"]
+          
           if job.get("comment") != "retry=0":
               job["comment"] = "retry=0"
 
@@ -119,9 +123,16 @@ jobs:
               headers={"Authorization": f"Bearer {api_key}"}
           )
           
-          job = json.load(
+          resp = json.load(
               urllib.request.urlopen(req, timeout=15)
-          )["job"]
+          )
+          
+          print(json.dumps(resp, indent=2, ensure_ascii=False))
+          
+          if "job" not in resp:
+              raise RuntimeError(f"cron-job.org 返回异常：{resp}")
+          
+          job = resp["job"]
 
           # 当前 retry
           comment = job.get("comment", "")
