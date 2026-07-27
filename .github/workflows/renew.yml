@@ -88,7 +88,8 @@ jobs:
                       fi
                   fi
                   
-                  MSG="🔴 XServer VPS 续期通知
+                  MSG="
+                  🔴 XServer VPS 续期通知
                   🕐 运行时间: ${RUN_TIME}
                   🧑🏻‍🏫 用户名: ${MASKED_EMAIL}
                   📊 续期结果: ⚠️ GOST 启动失败"
