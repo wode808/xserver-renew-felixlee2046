@@ -87,11 +87,18 @@ jobs:
                   method="PATCH"
               )
 
+              from urllib.error import HTTPError
+
               try:
-                  urllib.request.urlopen(req, timeout=15)
+                  resp = urllib.request.urlopen(req, timeout=15)
+                  print(resp.read().decode())
                   print("retry 已清零")
+              except HTTPError as e:
+                  print(f"HTTP {e.code}")
+                  print(e.read().decode())
+                  raise
               except Exception as e:
-                  print(f"重置 retry 失败：{e}")
+                  print(e)
                   raise
           EOF    
 
@@ -158,11 +165,16 @@ jobs:
                   method="PATCH"
               )
           
+              from urllib.error import HTTPError
+
               try:
-                  urllib.request.urlopen(req, timeout=15)
+                  resp = urllib.request.urlopen(req, timeout=15)
+                  print(resp.read().decode())
                   print("retry 已清零")
-              except Exception:
-                  pass
+              except HTTPError as e:
+                  print(f"HTTP {e.code}")
+                  print(e.read().decode())
+                  raise
           
               tg = os.environ.get("TG_BOT", "")
           
@@ -217,11 +229,18 @@ jobs:
               method="PATCH"
           )
           
+          from urllib.error import HTTPError
+
           try:
-              urllib.request.urlopen(req, timeout=15)
+              resp = urllib.request.urlopen(req, timeout=15)
+              print(resp.read().decode())
               print(f"已写回 Cron，retry={retry}")
+          except HTTPError as e:
+              print(f"HTTP {e.code}")
+              print(e.read().decode())
+              raise
           except Exception as e:
-              print(f"❌ 写回 Cron 失败：{e}")
+              print(e)
               raise
           
           tg = os.environ.get("TG_BOT", "")
