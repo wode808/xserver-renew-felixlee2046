@@ -79,9 +79,17 @@ jobs:
               headers={"Authorization":f"Bearer {api_key}"}
           )
 
-          job = json.load(
+          resp = json.load(
               urllib.request.urlopen(req, timeout=15)
-          )["job"]
+          )
+          
+          print("Cron API 返回：")
+          print(json.dumps(resp, ensure_ascii=False, indent=2))
+          
+          if "job" not in resp:
+              raise RuntimeError("Cron API 未返回 job 字段")
+          
+          job = resp["job"]
 
           if job.get("comment") != "retry=0":
               job["comment"] = "retry=0"
