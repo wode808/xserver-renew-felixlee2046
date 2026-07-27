@@ -41,12 +41,25 @@ jobs:
           nohup ./gost -L http://:8080 -F "$GOST_PROXY" > gost.log 2>&1 &
           sleep 3
           echo "✅ GOST 已启动，测试连通性..."
-          curl -fsS -x http://127.0.0.1:8080 https://api.ipify.org \
-          | sed -E 's/([0-9]+\.[0-9]+\.)[0-9]+\.[0-9]+/\1**.**/g'
-          echo
+          if curl -fsS \
+              --max-time 15 \
+              -x http://127.0.0.1:8080 \
+              https://api.ipify.org \
+              | sed -E 's/([0-9]+\.[0-9]+\.)[0-9]+\.[0-9]+/\1**.**/g'
+          then
+              echo
+              echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+              echo
+              echo "❌ GOST 连通性测试失败"
+              echo
+              echo "❌ GOST 连通性测试失败"
+              echo "ok=false" >> "$GITHUB_OUTPUT"
+              exit 0
+          fi
 
       - name: 🔄 GOST 成功后重置重试次数
-        if: ${{ steps.gost.conclusion == 'success' }}
+        if: ${{ steps.gost.outputs.ok == 'true' }}
         env:
           CRON_JOB: ${{ secrets.CRON_JOB }}
         run: |
@@ -92,12 +105,24 @@ jobs:
           EOF    
 
       - name: ⚠️ GOST 失败写回 Cron 5分钟后重试
-        if: ${{ steps.gost.conclusion == 'failure' }}
+        if: ${{ steps.gost.outputs.ok == 'false' }}
         env:
           CRON_JOB: ${{ secrets.CRON_JOB }}
           TG_BOT: ${{ secrets.TG_BOT }}
         run: |
+          echo "🛑 GOST 测试失败，停止 GOST..."
+          pkill -f "gost -L" || true
+          for i in {1..5}; do
+            if ! pgrep -f gost >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          echo "⏳ 等待60秒..."
+          sleep 60
+          echo "🌐 使用直连调用 cron-job.org API..."
           python3 - <<'EOF'
+          
           import os
           import re
           import json
@@ -237,7 +262,7 @@ jobs:
           EOF
 
       - name: 🛠️ 安装系统依赖
-        if: ${{ steps.gost.conclusion != 'failure' }}
+        if: ${{ steps.gost.outputs.ok == 'true' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -248,13 +273,13 @@ jobs:
             scrot
 
       - name: 🐍 安装 Python 依赖
-        if: ${{ steps.gost.conclusion != 'failure' }}
+        if: ${{ steps.gost.outputs.ok == 'true' }}
         run: |
           pip install seleniumbase
           seleniumbase install chromedriver
 
       - name: 🚀 运行脚本
-        if: ${{ steps.gost.conclusion != 'failure' }}
+        if: ${{ steps.gost.outputs.ok == 'true' }}
         env:
           PYTHONIOENCODING: utf-8
           XSERVER_ACCOUNT: ${{ secrets.XSERVER_ACCOUNT }}
