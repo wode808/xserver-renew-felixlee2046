@@ -127,8 +127,8 @@ jobs:
               urllib.request.urlopen(req, timeout=15)
           )
           
-          print("Cron API 返回：")
-          print(json.dumps(resp, ensure_ascii=False, indent=2))
+          #print("Cron API 返回：")
+          #print(json.dumps(resp, ensure_ascii=False, indent=2))
           
           job = resp.get("job") or resp.get("jobDetails")
           
